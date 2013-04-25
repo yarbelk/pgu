@@ -1,0 +1,10 @@
+# python
+
+*.pyc
+
+# vim
+*.swp
+*.swo
+
+# rope
+.ropeproject/*
