@@ -5,4 +5,3 @@ class PguError(Exception):
 
 class StyleError(PguError):
     pass
-

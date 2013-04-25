@@ -36,7 +36,5 @@ CLOSE = pygame.locals.USEREVENT + 7
 INIT = 'init'
 ACTIVATE = "activate"
 
-class NOATTR: 
+class NOATTR:
     pass
-
-

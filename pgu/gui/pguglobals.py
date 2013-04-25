@@ -6,4 +6,3 @@
 
 # A global reference to the application instance (App class)
 app = None
-

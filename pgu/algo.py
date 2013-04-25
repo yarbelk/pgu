@@ -7,8 +7,8 @@ future versions of pgu!
 # The manhattan distance metric
 def manhattan_dist(a,b):
     return abs(a[0]-b[0]) + abs(a[1]-b[1])
-    
-class node:
+
+class node(object):
     def __init__(self, prev, pos, dest, dist):
         self.prev,self.pos,self.dest = prev,pos,dest
         if self.prev == None: self.g = 0
@@ -18,20 +18,20 @@ class node:
 
 
 def astar(start,end,layer,dist=manhattan_dist):
-    """Uses the a* algorithm to find a path, and returns a list of positions 
+    """Uses the a* algorithm to find a path, and returns a list of positions
     from start to end.
 
     Arguments:
         start -- start position
         end -- end position
         layer -- a grid where zero cells are open and non-zero cells are walls
-        dist -- a distance function dist(a,b) - manhattan distance is used 
+        dist -- a distance function dist(a,b) - manhattan distance is used
             by default
-    
+
     """
 
     w,h = len(layer[0]),len(layer)
-    if start[0] < 0 or start[1] < 0 or start[0] >= w or start[1] >= h: 
+    if start[0] < 0 or start[1] < 0 or start[0] >= w or start[1] >= h:
         return [] #start outside of layer
     if end[0] < 0 or end[1] < 0 or end[0] >= w or end[1] >= h:
         return [] #end outside of layer
@@ -56,7 +56,7 @@ def astar(start,end,layer,dist=manhattan_dist):
         for dx,dy in [(0,-1),(1,0),(0,1),(-1,0)]:#(-1,-1),(1,-1),(-1,1),(1,1)]:
             pos = cur.pos[0]+dx,cur.pos[1]+dy
             # Check if the point lies in the grid
-            if (pos[0] < 0 or pos[1] < 0 or 
+            if (pos[0] < 0 or pos[1] < 0 or
                 pos[0] >= w or pos[1] >= h or
                 layer[pos[0]][pos[1]]):
                 continue
@@ -76,39 +76,39 @@ def astar(start,end,layer,dist=manhattan_dist):
                 if new.f < opens[mid].f: hi = mid
                 else: lo = mid + 1
             opens.insert(lo,new)
-    
-    if cur.pos != end: 
+
+    if cur.pos != end:
         return []
-                    
+
     path = []
     while cur.prev != None:
         path.append(cur.pos)
         cur = cur.prev
     path.reverse()
     return path
-    
+
 
 def getline(a,b):
     """Returns a path of points from a to b
 
-    Arguments:    
+    Arguments:
         a -- starting point
         b -- ending point
 
     """
-           
+
     path = []
-    
+
     x1,y1 = a
     x2,y2 = b
     dx,dy = abs(x2-x1),abs(y2-y1)
 
     if x2 >= x1: xi1,xi2 = 1,1
     else: xi1,xi2 = -1,-1
-    
+
     if y2 >= y1: yi1,yi2 = 1,1
     else: yi1,yi2 = -1,-1
-    
+
     if dx >= dy:
         xi1,yi2 = 0,0
         d = dx
@@ -121,13 +121,13 @@ def getline(a,b):
         n = dy/2
         a = dx
         p = dy
-        
+
     x,y = x1,y1
     c = 0
     while c <= p:
         path.append((x,y))
         n += a
-        if n > d: 
+        if n > d:
             n -= d
             x += xi1
             y += yi1
@@ -135,4 +135,3 @@ def getline(a,b):
         y += yi2
         c += 1
     return path
-
