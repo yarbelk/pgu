@@ -1,6 +1,7 @@
 # python
 
 *.pyc
+build/**
 
 # vim
 *.swp
