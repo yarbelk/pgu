@@ -71,7 +71,7 @@ def init():
 def run(g): 
     g.quit = 0
     
-    g.paint(g.screen)
+    g.update(g.screen)
     pygame.display.flip()
     
     while not g.quit:
