@@ -13,18 +13,15 @@ print('pgu.isovid - This module is alpha, and is subject to change.')
 from pgu.vid import *
 import pygame
 
-class Isovid(Vid):
+class Isovid(VidPaintUpdateMixin, Vid):
     """Create an iso vid engine.  See [[vid]]"""
-    def update(self, screen):
-        return self.paint(screen)
-
     def paint(self, screen):
         sw, sh = screen.get_width(), screen.get_height()
 
         tlayer = self.tlayer
         blayer = self.blayer
         zlayer = self.zlayer
-        w, h = len(tlayer[0]), len(tlayer)
+        w, h = self.size
 
         iso_w, iso_h, iso_z, tile_w, tile_h, base_w, base_h = self.iso_w, self.iso_h, self.iso_z, self.tile_w, self.tile_h, self.base_w, self.base_h
 
@@ -59,7 +56,8 @@ class Isovid(Vid):
             self.bounds = pygame.Rect(x1, y1, x2-x1, y2-y1)
         #""
 
-        if self.bounds != None: self.view.clamp_ip(self.bounds)
+        if self.bounds != None:
+            self.view.clamp_ip(self.bounds)
 
         ox, oy = self.screen_to_tile((0, 0))
         sx, sy = self.iso_to_view((ox*iso_w, oy*iso_h))

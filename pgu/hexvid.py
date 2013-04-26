@@ -15,21 +15,15 @@ from pgu.vid import *
 import pygame
 
 
-class Hexvid(Vid):
+class Hexvid(VidPaintUpdateMixin, Vid):
     """Create an hex vid engine.  See [[vid]]"""
-    def update(self, screen):
-        return self.paint(screen)
-
     def paint(self, screen):
         sw, sh = screen.get_width(), screen.get_height()
         self.view.w, self.view.h = sw, sh
 
         tlayer = self.tlayer
         blayer = self.blayer
-        #zlayer = self.zlayer
-        w, h = len(tlayer[0]), len(tlayer)
-
-        #iso_w, iso_h, iso_z, tile_w, tile_h, base_w, base_h = self.iso_w, self.iso_h, self.iso_z, self.tile_w, self.tile_h, self.base_w, self.base_h
+        w, h = self.size
 
         tile_w, tile_h = self.tile_w, self.tile_h
         tile_w2, tile_h2 = tile_w/2, tile_h/2
@@ -50,7 +44,8 @@ class Hexvid(Vid):
             print self.bounds
         #""
 
-        if self.bounds != None: self.view.clamp_ip(self.bounds)
+        if self.bounds != None:
+            self.view.clamp_ip(self.bounds)
 
         ox, oy = self.screen_to_tile((0, 0))
         sx, sy = self.tile_to_view((ox, oy))
