@@ -13,40 +13,48 @@ TW,TH = 16,16
 
 def init():
     screen = pygame.display.set_mode((SW,SH),HWSURFACE)
-    g = newvid.NewVid(screen=screen)
+    layer_group = pygame.sprite.LayeredDirty()
+    g = newvid.NewVid(screen=screen, layer_group=layer_group)
     g.view = screen.get_rect()
-    g.old_view = screen.get_rect()
-    map_obj = newvid.TileMap()
+    g.old_view = Rect(g.view)
+    map_obj = newvid.TileMap(layer_group)
     g.map_bg = map_obj
 
     tiles = [[newvid.Tile(pygame.Surface((16,16)),
+                        newvid.Pos(16,16),
+                        newvid.Pos(1,1),
+                        {},
                         newvid.Pos(x,y),
-                        newvid.Pos(16,16))
+                        layer_group,)
                         for x in xrange(20)] for y in xrange(15)]
     for tile_row in tiles:
         for tile in tile_row:
             c = Color(1,2,3)
-            c.hsva = (int(random() * 255),70 ,70, 70); c
+            c.hsva = (int(random() * 255),30,70, 70); c
             tile.image.fill(c)
-            tile.add(g.map_bg.tile_group)
-    map_obj.tiles = tiles
-    for y, tile_row in enumerate(tiles):
-        for x, tile in enumerate(tile_row):
-            map_obj.set_tile(tile, newvid.Pos(x,y))
-
+    map_obj.sprites = tiles
     map_obj.tile_size = newvid.Pos(16,16)
     map_obj.size = newvid.Pos(20, 15)
-
-    sprites = newvid.SpriteCollection()
-
-    sprite = newvid.PguSprite(pygame.Surface((16,16)),
-                        newvid.Pos(16,16), None,
-                        newvid.Pos(int(random() * 20),int(random() * 15)),)
-    sprite.image.fill(Color(0,0,0))
-    sprite.add(sprites.sprite_group)
-
-    sprites.sprites = [sprite,]
-    g.sprites = sprites
+    map_obj.surface = pygame.surface.Surface((SW, SH))
+    map_obj.set_bg()
+#
+#    sprites = newvid.SpriteCollection()
+#
+#    sprite = newvid.PguSprite(pygame.Surface((16,16)),
+#                        newvid.Pos(16,16), None,
+#                        newvid.Pos(0, 0),)
+#    sprite.image.fill(Color(255,0,0))
+#    sprite.add(sprites.sprite_group)
+#
+#    sprite2 = newvid.PguSprite(pygame.Surface((16,16)),
+#                        newvid.Pos(32,32), None,
+#                        newvid.Pos(10,10),)
+#    sprite2.image.fill(Color(0,255,0))
+#    sprite2.add(sprites.sprite_group)
+#    sprites.sprites = [sprite, sprite2]
+#    for sprite in sprites.sprites:
+#        print sprite.pos
+#    g.sprites = sprites
 
 
     return g
@@ -55,16 +63,29 @@ def run(g):
     g.quit = 0
 
     g.map_bg.draw_map()
+    g.draw_bg(g.screen)
     g.draw(g.screen, g.screen.get_rect())
     pygame.display.flip()
 
     while not g.quit:
         for e in pygame.event.get():
-            if e.type is QUIT: g.quit = 1
-            if e.type is KEYDOWN and e.key == K_ESCAPE: g.quit = 1
-            if e.type is KEYDOWN and e.key != K_ESCAPE:
-                for sprite in g.sprites.sprites:
-                    sprite.move(newvid.Pos(int(random() * 20), int(random() * 15)))
+            if e.type is QUIT:
+                g.quit = 1
+            if e.type is KEYDOWN:
+                if e.key == K_ESCAPE:
+                    g.quit = 1
+                if e.key == K_UP:
+                    for sprite in g.sprites.sprites:
+                        sprite.move((sprite.pos.x, (sprite.pos.y - 1) % 15))
+                if e.key == K_DOWN:
+                    for sprite in g.sprites.sprites:
+                        sprite.move((sprite.pos.x, (sprite.pos.y + 1) % 15))
+                if e.key == K_LEFT:
+                    for sprite in g.sprites.sprites:
+                        sprite.move(((sprite.pos.x - 1) % 20, sprite.pos.y))
+                if e.key == K_RIGHT:
+                    for sprite in g.sprites.sprites:
+                        sprite.move(((sprite.pos.x + 1) % 20, sprite.pos.y))
         g.draw(g.screen, g.screen.get_rect())
         pygame.display.flip()
 

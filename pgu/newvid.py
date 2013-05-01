@@ -27,13 +27,13 @@ import yaml
 
 PosT = namedtuple('Pos',('x', 'y', 'z'))
 
-Pos = lambda x, y, z=0: PosT(x, y, z)
+PosL = lambda x, y, z=0: PosT(x, y, z)
 def Pos(*args):
     if type(args[0]) == PosT:
         return args[0]
-    if len(args) == 2:
-        args = args + (0,)
-    return PosT(*args)
+    if type(args[0]) == tuple:
+        return PosL(*(args[0]))
+    return PosL(*args)
 # Iso and Hex use 3 coords, so make this support it by default
 
 
@@ -56,14 +56,22 @@ class GeometryMixin(object):
 
 
 class BaseSprite(pygame.sprite.DirtySprite):
-    def __init__(self, image, size, attributes, pos, *groups):
+    def __init__(self, image, tile_size, size, attributes, pos, *groups):
         self.image = image
+        self.tile_size = Pos(tile_size)
         self.size = Pos(size)
         self.pos = Pos(size)
         self.old_pos = Pos(self.pos)
         surf_pos = self.get_surface_pos(pos)
         self.rect = Rect(surf_pos.x, surf_pos.y, size.x, size.y)
         self.old_rect = Rect(self.rect)
+        self.groups = groups
+        self.dirty = 1
+        for attribute in attributes:
+            if self.hasattr(attribute):
+                self.setattr(attributes[attribute])
+            else:
+                raise AttributeError("Bad Attribute")
         super(BaseSprite, self).__init__(*groups)
 
     def move(self, pos):
@@ -88,19 +96,19 @@ class Tile(BaseSprite):
     """
     A tile, which is an image, size and position in tile coords
     """
-    def __init__(self, image, pos, size=None, attributes=None,
-                groups=tuple()):
-        self.image = image
-        self.pos = Pos(pos)
-        size = size or image.size
-        self.size = Pos(size)
-        self.rect = self.get_surface_pos(pos)
-        self.attributes = attributes
-        pygame.sprite.DirtySprite.__init__(self, *groups)
+    def __init__(self, image, tile_size, size, attributes, pos,
+            *groups):
+        self._layer = -1
+        super(Tile, self).__init__(image, tile_size, size, attributes, pos,
+                *groups)
 
 
 class PguSprite(BaseSprite):
-    pass
+    def __init__(self, image, tile_size, size, attributes, pos,
+            *groups):
+        self._layer = 0
+        super(Tile, self).__init__(image, tile_size, size, attributes, pos,
+                *groups)
 
 
 class SpriteCollectionMixin(object):
@@ -118,8 +126,13 @@ class SpriteCollectionMixin(object):
             subsurface = self.surface.subsurface(region)
             surface.blit(subsurface, region)
 
-    def set_draw_rect(self, surface, view):
-        raise NotImplemented
+    def get_old_rects(self):
+        """ return the old positions of sprites that are dirty """
+        dirty_rects = []
+        for sprite in self.sprites:
+            if sprite.dirty:
+                dirty_rects.append([sprite.rect])
+        return dirty_rects
 
 
 class TileMap(GeometryMixin, SpriteCollectionMixin):
@@ -135,11 +148,11 @@ class TileMap(GeometryMixin, SpriteCollectionMixin):
         tiles -- 2d array of the tiles (Tile objects)
     """
 
-    def __init__(self, map_file=None):
-        self.tile_group = pygame.sprite.RenderUpdates()
+    def __init__(self, layer_group, map_file=None, *groups):
+        self.layer_group = layer_group
+        self.groups = groups + (layer_group, )
         if map_file:
-            self.load_map(map_file)
-        self.surface = pygame.surface.Surface((320, 240))
+            self.load_map(map_file, groups)
 
     def load_map(self, map_file):
         with open(map_file) as map_fd:
@@ -148,39 +161,40 @@ class TileMap(GeometryMixin, SpriteCollectionMixin):
         self.atlas = self.load_atlas(data['meta']['atlas'])
         self.tile_descriptors = data['tiles']
         self.tile_size = Pos(data['tile_size'])
-        self.tiles = [[Tile(self.atlas[tile['image']],
-                           tile['pos'],
-                           size=self.tile_size,
+        self.sprites = [[Tile(self.atlas[tile['image']],
+                           tile_size=self.tile_size,
+                           size=tile['size'],
                            attributes=tile['attributes'],
-                           groups=self.tile_group)
+                           pos=tile['pos'],
+                           *self.group)
                            for tile in 
                            tile_row] for tile_row in self.tile_descriptors]
+        self.surface = pygame.surface.Surface((size[0] * tile_size[0],
+                                              size[1] * tile_size[1]))
 
-    def draw_map(self):
-        """Paints full map onto the internal surface"""
-        for tile_row in self.tiles:
+    def set_bg(self):
+        for tile_row in self.sprites:
             for tile in tile_row:
-                tile.dirty = 1 if tile.dirty <2 else 2
-        self.tile_group.draw(self.surface)
+                self.surface.blit(tile)
+        self.layer_group.clear(self.surface)
+
+    def get_bg(self):
+        return self.surface
 
     def set_tile(self, tile, pos):
         tile.pos = pos
         tile.dirty = 1 if tile.dirty < 2 else 2
-        self.tiles[pos.y][pos.x] = tile
-
-    def draw(self, surface):
-        return self.tile_group.draw(surface)
-
-    def set_draw_rect(self, surface, view):
-        for sprite in self.tile_group:
-            sprite.dirty = 1 if sprite.dirty < 2 else 2
+        self.sprites[pos[1]][pos[0]].kill()
+        self.sprites[pos[1]][pos[0]] = tile
+        self.surface.blit(tile)
 
 
 class SpriteCollection(SpriteCollectionMixin):
-    def __init__(self, sprite_file=None):
-        self.sprite_group = pygame.sprite.RenderUpdates()
-        if sprite_file:
-            self.load_sprites(sprite_file)
+    def __init__(self, layer_group, sprite_file=None, *groups):
+        self.layer_group = layer_group
+        self.groups = groups + (layer_group, )
+        if map_file:
+            self.load_sprites(sprite_file, groups)
 
     def load_sprites(self, sprite_file):
         with open(sprite_file) as sprite_fd:
@@ -191,35 +205,28 @@ class SpriteCollection(SpriteCollectionMixin):
         for sprite in self.sprites:
             sprite.add(self.sprite_group)
 
-    def draw(self, surface):
-        self.sprite_group.draw(surface)
-
-    def set_draw_rect(self, surface, view):
-        for sprite in self.sprite_group:
-            sprite.dirty = 1 if sprite.dirty < 2 else 2
-
 
 class NewVid(object):
     """
     This is a tile engine for keeping a background layer and a forground
     layers.
     """
-    def __init__(self, screen, map_file=None, sprite_file=None):
+    def __init__(self, screen, layer_group, map_file=None, sprite_file=None,
+            *groups):
         self.view = pygame.Rect(0, 0, 0, 0)
         self.old_view = pygame.Rect(self.view)
         self.screen = screen
         #self.map_bg = self.load_map(map_file)
         #self.sprites = self.load_sprites(sprite_file)
+        self.layer_group = pygame.sprite.LayeredDirty()
 
     def load_map(self, map_file):
-        self.map_bg = TileMap(map_file)
-        self.map_bg.draw_map()
+        self.map_bg = TileMap(layer_group, map_file, self.groups)
+        self.map_bg.set_bg()
 
     def load_sprites(self, sprite_file):
-        self.sprites = SpriteCollection(sprite_file)
+        self.sprites = SpriteCollection(sprite_file,self.layer_group)
 
     def draw(self, surface, view):
-        self.map_bg.set_draw_rect(surface,self.view)
-        self.sprites.set_draw_rect(surface,self.view)
-        self.map_bg.draw(surface)
-        self.sprites.draw(surface)
+        self.layer_group.clear(surface, self.map_bg.get_bg)
+        self.layer_group.draw(surface)
