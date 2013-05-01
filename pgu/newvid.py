@@ -195,6 +195,9 @@ class SpriteCollection(SpriteCollectionMixin):
         if sprite_file:
             self.load_sprites(sprite_file, groups)
 
+    def update(self, *args):
+        self.sprite_group.update(*args)
+
     def load_sprites(self, sprite_file):
         with open(sprite_file) as sprite_fd:
             data = yaml.load_all(sprite_fd)
