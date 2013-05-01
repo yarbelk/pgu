@@ -2,6 +2,7 @@ import pygame
 from pygame.locals import *
 from pygame.rect import Rect
 from random import random
+from math import sqrt, copysign
 pygame.init()
 
 # the following line is not needed if pgu is installed
@@ -19,6 +20,7 @@ class AnimatedSprite(newvid.PguSprite):
         self.moving = False
         self.dx = self.dy = 0
         self._dx = self._dy = 0
+        self.max_dX = 2.0
         super(AnimatedSprite, self).__init__(*args, **kwargs)
         self.target_pos = self.pos
 
@@ -35,21 +37,38 @@ class AnimatedSprite(newvid.PguSprite):
     def move(self, pos):
 #        if self.moving:
 #            return
+        self.dirty = 1 if self.dirty < 2 else 2
         self.moving = True
         self.target_pos = newvid.Pos(pos)
         self.target_surface_pos = self.get_surface_pos(pos)
-        self._dx = float(self.target_surface_pos[0] - self.rect[0]) / frame_rate
-        self._dy = float(self.target_surface_pos[1] - self.rect[1]) / frame_rate
+        self._set_dX()
+        self.rect[0] += int(self.dx)
+        self.rect[1] += int(self.dy)
+        if abs(self.dx) >=1:
+            self.dx = copysign(int(self.dx) - self.dx, self.dx)
+        if abs(self.dy) >=1:
+            self.dy = copysign(int(self.dy) - self.dy, self.dy)
 
     def _set_dX(self):
         self.Dx = self.target_surface_pos.x - self.rect[0]
         self.Dy = self.target_surface_pos.y - self.rect[1]
-        self.dx = self.dx + self._dx
-        self.dy = self.dy + self._dy
-        if abs(self.Dx) < abs(self.dx):
-            self.dx = self.Dx
-        if abs(self.Dy) < abs(self.dy):
-            self.dy = self.Dy
+        dx = float(self.target_surface_pos[0] - self.rect[0])
+        dy = float(self.target_surface_pos[1] - self.rect[1])
+        dX_mag = sqrt(dx * dx + dy * dy)
+        if dX_mag:
+            dx = dx * self.max_dX/ dX_mag
+            dy = dy * self.max_dX/ dX_mag
+            self._dx = dx
+            self._dy = dy
+            self.dx = self.dx + self._dx
+            self.dy = self.dy + self._dy
+            if abs(self.Dx) < abs(self.dx):
+                self.dx = self.Dx
+            if abs(self.Dy) < abs(self.dy):
+                self.dy = self.Dy
+        else:
+            self._dx = self._dy = self.dx = self.dy = 0
+        print sqrt( self.dx * self.dx + self.dy * self.dy)
 
     def update(self, clock, *args):
         if self.moving:
@@ -57,14 +76,8 @@ class AnimatedSprite(newvid.PguSprite):
                 self.pos = self.target_pos
                 self.moving = False
                 self.dx = self.dy = self._dx = self._dy = 0
-            self._set_dX()
-            self.rect[0] += self.dx
-            self.rect[1] += self.dy
-            if int(self.dx) >= 1:
-                self.dx = 0
-            if int(self.dy) >= 1:
-                self.dy = 0
-            self.dirty = 1 if self.dirty < 2 else 2
+            else:
+                self.move(self.target_pos)
 
 def init():
     screen = pygame.display.set_mode((SW,SH),HWSURFACE)
@@ -148,7 +161,7 @@ def run(g):
                         sprite.move_dir(newvid.Pos(0, 1))
                 if e.key == K_LEFT:
                     for sprite in g.sprites.sprites:
-                        sprite.move_dir(newvid.Pos(-1, 0))
+                        sprite.move_dir(newvid.Pos(-3, -1))
                 if e.key == K_RIGHT:
                     for sprite in g.sprites.sprites:
                         sprite.move_dir(newvid.Pos(1, 0))
@@ -158,4 +171,5 @@ def run(g):
         pygame.display.flip()
 
 run(init())
+
 
