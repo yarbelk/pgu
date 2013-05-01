@@ -14,10 +14,13 @@ TW,TH = 16,16
 def init():
     screen = pygame.display.set_mode((SW,SH),HWSURFACE)
     layer_group = pygame.sprite.LayeredDirty()
-    g = newvid.NewVid(screen=screen, layer_group=layer_group)
+    bg_group = pygame.sprite.RenderUpdates()
+    sprite_group = pygame.sprite.RenderUpdates()
+    g = newvid.NewVid(screen=screen, layer_group=layer_group,
+                      bg_group=bg_group)
     g.view = screen.get_rect()
     g.old_view = Rect(g.view)
-    map_obj = newvid.TileMap(layer_group)
+    map_obj = newvid.TileMap(layer_group, bg_group)
     g.map_bg = map_obj
 
     tiles = [[newvid.Tile(pygame.Surface((16,16)),
@@ -25,7 +28,7 @@ def init():
                         newvid.Pos(1,1),
                         {},
                         newvid.Pos(x,y),
-                        layer_group,)
+                        layer_group, bg_group)
                         for x in xrange(20)] for y in xrange(15)]
     for tile_row in tiles:
         for tile in tile_row:
@@ -37,24 +40,31 @@ def init():
     map_obj.size = newvid.Pos(20, 15)
     map_obj.surface = pygame.surface.Surface((SW, SH))
     map_obj.set_bg()
-#
-#    sprites = newvid.SpriteCollection()
-#
-#    sprite = newvid.PguSprite(pygame.Surface((16,16)),
-#                        newvid.Pos(16,16), None,
-#                        newvid.Pos(0, 0),)
-#    sprite.image.fill(Color(255,0,0))
-#    sprite.add(sprites.sprite_group)
-#
-#    sprite2 = newvid.PguSprite(pygame.Surface((16,16)),
-#                        newvid.Pos(32,32), None,
-#                        newvid.Pos(10,10),)
-#    sprite2.image.fill(Color(0,255,0))
-#    sprite2.add(sprites.sprite_group)
-#    sprites.sprites = [sprite, sprite2]
-#    for sprite in sprites.sprites:
-#        print sprite.pos
-#    g.sprites = sprites
+
+    sprite_col = newvid.SpriteCollection(layer_group, sprite_group, sprite_file=None)
+
+    sprite = newvid.PguSprite(
+                        pygame.Surface((16,16)),
+                        newvid.Pos(16,16),
+                        newvid.Pos(1,1),
+                        {},
+                        newvid.Pos(0, 0),
+                        layer_group,
+                        sprite_group)
+    sprite.image.fill(Color(255,0,0))
+
+    sprite2 = newvid.PguSprite(
+                        pygame.Surface((16,16)),
+                        newvid.Pos(16,16),
+                        newvid.Pos(1,1),
+                        {},
+                        newvid.Pos(1, 0),
+                        layer_group,
+                        sprite_group)
+    sprite2.image.fill(Color(255,0,0))
+
+    sprite_col.sprites = [sprite, sprite2]
+    g.sprites = sprite_col
 
 
     return g
@@ -62,8 +72,7 @@ def init():
 def run(g):
     g.quit = 0
 
-    g.map_bg.draw_map()
-    g.draw_bg(g.screen)
+    g.map_bg.set_bg()
     g.draw(g.screen, g.screen.get_rect())
     pygame.display.flip()
 
