@@ -23,35 +23,7 @@ from pygame.rect import Rect
 from pygame.locals import *
 import math
 
-
-class _Sprite(pygame.DirtySprite):
-    """ Base class for sprites and tiles
-
-    Arguments:
-        ishape -- an image, or an image, rectstyle.  The rectstyle will
-            describe the shape of the image, used for collision
-            detection.
-    """
-    #TODO make this inherit from pygame.sprite.DirtySprite
-    # This would mean changing how updates are done, to take advantage of
-    # dirtyness.
-    def __init__(self, ishape=None, *groups):
-        self.image = ishape
-        self._image = self.image
-        self.tile_h = self.image.get_height()
-        self.tile_w = self.image.get_width()
-        super(_Sprite, self).__init__(*groups)
-
-    def __setattr__(self, k, v):
-        if k == 'image' and v != None:
-            self.image_h = v.get_height()
-            self.image_w = v.get_width()
-            self.tile_h = v.get_height()
-            self.tile_w = v.get_width()
-        self.__dict__[k] = v
-
-
-class Sprite(_Sprite):
+class Sprite(object):
     """The object used for Sprites.
 
     Arguments:
@@ -67,30 +39,26 @@ class Sprite(_Sprite):
         agroups -- the groups the Sprite can hit in a collision
         hit -- the handler for hits -- hit(g, s, a)
         loop -- the loop handler, called once a frame
-        irect -- the bounding rectangle for the image
 
     """
-    def __init__(self, ishape, pos, *groups):
-        image, shape = self._ishape_tupple(ishape)
-        super(Sprite, self).__init__(image)
+    def __init__(self, ishape, pos):
+        if not isinstance(ishape, tuple):
+            ishape = ishape, None
+        image, shape = ishape
+        if shape == None:
+            shape = pygame.Rect(0, 0, image.get_width(), image.get_height())
+        if isinstance(shape, tuple): shape = pygame.Rect(shape)
+        self.image = image
+        self._image = self.image
         self.shape = shape
-        self.pos = pos
         self.rect = pygame.Rect(pos[0], pos[1], shape.w, shape.h)
         self._rect = pygame.Rect(self.rect)
         self.irect = pygame.Rect(pos[0]-self.shape.x, pos[1]-self.shape.y,
             image.get_width(), image.get_height())
         self._irect = pygame.Rect(self.irect)
-        super(Sprite, self).__init__(*groups)
-
-    def _ishape_tupple(self, ishape):
-        if not isinstance(ishape, tuple):
-            ishape = ishape, None
-        image, shape = ishape
-        if isinstance(shape, tuple):
-            shape = pygame.Rect(shape)
-        if shape == None:
-            shape = pygame.Rect(0, 0, image.get_width(), image.get_height())
-        return (image, shape)
+        self.groups = 0
+        self.agroups = 0
+        self.updated = 1
 
     def setimage(self, ishape):
         """Set the image of the Sprite.
@@ -100,14 +68,21 @@ class Sprite(_Sprite):
                       describe the shape of the image, used for collision detection.
 
         """
-        image, shape = self._ishape_tupple(ishape)
+        if not isinstance(ishape, tuple):
+            ishape = ishape, None
+        image, shape = ishape
+        if shape == None:
+            shape = pygame.Rect(0, 0, image.get_width(), image.get_height())
+        if isinstance(shape, tuple):
+            shape = pygame.Rect(shape)
         self.image = image
         self.shape = shape
         self.rect.w, self.rect.h = shape.w, shape.h
         self.irect.w, self.irect.h = image.get_width(), image.get_height()
         self.updated = 1
 
-class Tile(_Sprite):
+
+class Tile(object):
     """Tile Object used by TileCollide.
 
     Arguments:
@@ -119,103 +94,28 @@ class Tile(_Sprite):
 
     """
     def __init__(self, image=None):
-        super(Tile, self).__init__(image)
+        self.image = image
+        self.agroups = 0
 
+    def __setattr__(self, k, v):
+        if k == 'image' and v != None:
+            self.image_h = v.get_height()
+            self.image_w = v.get_width()
+        self.__dict__[k] = v
 
-class NewVid(object):
-    """
-    layers - bg, icon, top,
-    """
-    def __init__(self, max_tile_size=256):
-        self.sprites = pygame.sprite.RenderUpdates()
-        self.layers = pygame.sprite.LayeredDirty(default_layer='fg')
-        self.size = None
-        self.view = pygame.Rect(0, 0, 0, 0)
-        self._view = pygame.Rect(self.view)
-        self.bounds = None
+class _Sprites(list):
+    def __init__(self):
+        super(_Sprites, self).__init__()
+        self.removed = []
 
-    def get_sprite_blit_rect(self, pos, sprite):
-        sprite_rect = sprite.get_rect()
-        sprite_rect.top_left = pos
-        return sprite_rect
+    def append(self, v):
+        list.append(self, v)
+        v.updated = 1
 
-    def set(self, pos, sprite):
-        sprite.pos = pos
-        sprite.rect = self.get_sprite_blit_rect(pos, sprite)
-        sprite.dirty = 1 if sprite.dirty != 2 else 2
-
-    def get(self, pos):
-        """Get a sprite from the forground """
-        sprites = self.layers.get_sprites_at(pos)
-        for sprite in sprites:
-            if sprite.layer == 'fg':
-                return sprite
-
-    def paint(self, surface):
-        return self.layers.draw(surface)
-
-    def update(self, screen):
-        self.layers.update(*args)
-
-    def tga_load_level(self, fname, bg=0):
-        """Load a TGA level.
-
-        Arguments:
-            g        -- a Tilevid instance
-            fname    -- tga image to load
-            bg        -- set to 1 if you wish to load the background layer
-
-        """
-        if type(fname) == str: img = pygame.image.load(fname)
-        else: img = fname
-        w, h = img.get_width(), img.get_height()
-        self.resize((w, h), bg)
-        for y in range(0, h):
-            for x in range(0, w):
-                fg, bg, code, _a = img.get_at((x, y))
-                t_sprite = Sprite()
-                t_sprite.layer = 'fg'
-                t_sprite.add(self.layers)
-                self.tlayer[y][x] = t
-
-                if bg:
-                    b_sprite = Sprite()
-                    b_sprite.layer = 'bg'
-                    b_sprite.add(self.layers)
-                    self.blayer[y][x] = b
-                self.clayer[y][x] = c
-
-    def tga_load_tiles(self, fname, size, tdata={}):
-        """Load a TGA tileset.
-
-        Arguments:
-            g       -- a Tilevid instance
-            fname    -- tga image to load
-            size    -- (w, h) size of tiles in pixels
-            tdata    -- tile data, a dict of tile:(agroups, hit handler, config)
-
-        """
-        TW, TH = size
-        if type(fname) == str:
-            img = pygame.image.load(fname).convert_alpha()
-        else: img = fname
-        w, h = img.get_width(), img.get_height()
-
-        n = 0
-        for y in range(0, h, TH):
-            for x in range(0, w, TW):
-                i = img.subsurface((x, y, TW, TH))
-                tile = Tile(i)
-                tile.layer = 'bg'
-                tile.add(self.layers)
-                self.tiles[n] = tile
-                if n in tdata:
-                    agroups, hit, config = tdata[n]
-                    tile.agroups = self.string2groups(agroups)
-                    tile.hit = hit
-                    tile.config = config
-                n += 1
-
+    def remove(self, v):
+        list.remove(self, v)
+        v.updated = 1
+        self.removed.append(v)
 
 class Vid(object):
     """An engine for rendering Sprites and Tiles.
@@ -240,14 +140,16 @@ class Vid(object):
 
     def __init__(self):
         self.tiles = [None for x in xrange(0, 256)]
-        self.sprites = pygame.sprite.RenderUpdates()
-        self.blayer = pygame.sprite.RenderUpdates()
-        self.tlayer = pygame.sprite.RenderUpdates()
-        self.alayer = pygame.sprite.RenderUpdates()
+        self.sprites = _Sprites()
+        self.images = {} #just a store for images.
+        self.layers = None
         self.size = None
         self.view = pygame.Rect(0, 0, 0, 0)
         self._view = pygame.Rect(self.view)
         self.bounds = None
+        self.updates = []
+        self.groups = {}
+
 
     def resize(self, size, bg=0):
         """Resize the layers.
@@ -364,6 +266,8 @@ class Vid(object):
                 img.set_at((x, y), (t, b, c, _a))
         pygame.image.save(img, fname)
 
+
+
     def tga_load_tiles(self, fname, size, tdata={}):
         """Load a TGA tileset.
 
@@ -391,6 +295,7 @@ class Vid(object):
                     tile.hit = hit
                     tile.config = config
                 n += 1
+
 
     def load_images(self, idata):
         """Load images.
@@ -424,6 +329,7 @@ class Vid(object):
                     t.tx, t.ty = x, y
                     t.rect = pygame.Rect(x*tw, y*th, tw, th)
                     fnc(self, t, value)
+
 
     def string2groups(self, str):
         """Convert a string to groups."""
@@ -562,6 +468,7 @@ class Vid(object):
                 _rect.x = _rectx
                 _rect.y = _recty
 
+
     def loop_spritehits(self):
         as_ = self.sprites[:]
 
@@ -593,6 +500,7 @@ class Vid(object):
                     g >>= 1
                     n <<= 1
 
+
     def screen_to_tile(self, pos):
         """Convert a screen position to a tile position."""
         return pos
@@ -600,146 +508,3 @@ class Vid(object):
     def tile_to_screen(self, pos):
         """Convert a tile position to a screen position."""
         return pos
-
-
-class TileBasedVidMixin(object):
-    def set_bounds(self):
-        if self.bounds is not None:
-            self.view.clamp_ip(self.bounds)
-
-    def blit_tiles(self, screen, to_update):
-        tile_h = self.tiles[0].tile_h
-        tile_w = self.tiles[0].tile_w
-        yy = - (self.view.y % tile_h)
-        xx = - (self.view.x % tile_w)
-        us = []
-        for (x, y) in to_update:
-            if self.blayer is not None:
-                screen.blit(self.tiles[self.blayer[y][x]].image,(xx,yy))
-            screen.blit(self.tiles[self.tlayer[y][x]].image,(xx,yy))
-            us.append(Rect(xx, yy, tile_w, tile_h))
-        return us
-
-    def _get_sprite_removal_list(self, rect):
-        y_bottom = max(0, rect.y / self.tile_h)
-        y_top = min(self.size[1], rect.bottom / self.tile_h + 1)
-        x_bottom = max(0, rect.x / self.tile_h)
-        x_top = min(self.size[1], rect.top / self.tile_w + 1)
-        to_check = [[(x,y) for y in xrange(y_bottom, y_top)]
-                    for x in xrange(x_bottom, x_top)]
-
-    def remove_sprites(self, screen):
-        old_sprites_removed = self.sprites.removed[:]
-        self.sprites.removed = []
-        old_sprites_removed.extend(self.sprites[:])
-
-        for sprite in old_sprites_removed:
-            sprite.irect.x = sprite.rect.x-sprite.shape.x
-            sprite.irect.y = sprite.rect.y-sprite.shape.y
-            if (s.irect.x != s._irect.x or s.irect.y != s._irect.y
-                     or s.image != s._image):
-                 #w,h can be skipped, image covers that...
-                 sprite.updated = True
-
-                 # From old position
-                 to_check = self._get_sprite_removal_list(sprite._irect)
-                 for x, y in to_check:
-                     if not self.alayer[y][x]:
-                         self.updates.extend((x,y))
-                     self.alayer[y][x] = 1
-
-                 # from new position
-                 to_check = self._get_sprite_removal_list(sprite.irect)
-                 for x, y in to_check:
-                     if not self.alayer[y][x]:
-                         self.alayer[y][x] = 2
-                         self.updates.extend((x,y))
-
-        #mark sprites that are not being updated that need to be updated because
-        #they are being overwritte by sprites / tiles
-        for sprite in self.sprites:
-            if not sprite.updated:
-                 to_check = self._get_sprite_removal_list(sprite.irect)
-                 for x, y in to_check:
-                     if self.alayer[x][y] == 1:
-                         sprite.updated = True
-
-    def blit_sprites(self, screen):
-        us = []
-        for x, y in self.updates:
-            xx = x * self.tile_w - self.view.x
-            yy = y * self.tile_h - self.view.y
-            if self.alayer[y][x] == 1:
-                if self.blayer is not None:
-                    screen.blit(self.tiles[self.blayer[y][x]].image,(xx,yy))
-                screen.blit(self.tiles[self.tlayer[y][x]].image,(xx,yy))
-            self.alayer[y][x]=0
-            us.append(Rect(xx, yy, self.tile_w, self.tile_h))
-
-        for sprite in self.sprites:
-            if sprite.updated:
-                screen.blit(sprite.image, (sprite.irect.x - self.view.x,
-                            sprite.irect.y - self.view.y))
-                sprite.updated=0
-                sprite._irect = Rect(sprite.irect)
-                sprite._image = sprite.image
-
-        return us  # bit inconsistant with the prior
-
-    def update(self, screen):
-        """Update the screen.
-
-        Arguments:
-            screen -- a pygame.Rect to update
-
-        Returns a list of updated rectangles.
-
-        """
-        sw,sh = screen.get_width(), screen.get_height()
-        self.view.w, self.view.h = sw,sh
-
-        self.set_bounds()
-        tile_h = self.tiles[0].tile_h
-        tile_w = self.tiles[0].tile_w
-        my = self.view.bottom - self.view.top / tile_h
-#        if (self.view.bottom - self.view.top) % tile_h:
-#            my += 1
-        mx = (self.view.right - self.view.left) / tile_w
-
-        to_update = [ (x, y) for x in xrange(max( 0, self.view.x / tile_w), min(mx, self.size[0]))
-                        for y in xrange(max(0, self.view.y / tile_h), min(my, self.size[1])) ]
-
-        self.remove_sprites(screen)  # set the sprites to be removed
-
-        us = self.paint(screen, to_update)
-
-        return [ Rect(u[0] * tile_w - self.view.x,
-                      u[1] * tile_h - self.view.y,
-                      tile_w,
-                      tile_h,) for u in self.updates]
-
-
-
-    def paint(self, screen, to_update=None):
-        if to_update is None:
-            return self.update(screen)
-        us = self.blit_tiles(screen, to_update)
-
-        us.extend(self.blit_sprites(screen))
-
-        return us
-
-
-
-class IsoHexVidMixin(TileBasedVidMixin):
-    def set_bounds(self):
-        w, h = self.size
-        if self.bounds != None:
-            self.view.clamp_ip(self.bounds)
-        else:
-            tmp, y1 = self.tile_to_view((0, 0))
-            x1, tmp = self.tile_to_view((0, h+1))
-            tmp, y2 = self.tile_to_view((w+1, h+1))
-            x2, tmp = self.tile_to_view((w+1, 0))
-            self.bounds = pygame.Rect(x1, y1, x2-x1, y2-y1)
-            print self.bounds
