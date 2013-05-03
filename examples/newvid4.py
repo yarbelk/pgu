@@ -15,8 +15,7 @@ TW,TH = 16,16
 frame_rate =16
 
 class AnimatedSprite(newvid.PguSprite):
-    def __init__(self, vid,  *args, **kwargs):
-        self.vid = vid
+    def __init__(self, *args, **kwargs):
         self.moving = False
         self.dx = self.dy = 0
         self._dx = self._dy = 0
@@ -84,13 +83,7 @@ def init():
     layer_group = pygame.sprite.LayeredDirty()
     bg_group = pygame.sprite.RenderUpdates()
     sprite_group = pygame.sprite.RenderUpdates()
-    g = newvid.NewVid(screen=screen, layer_group=layer_group,
-                      bg_group=bg_group)
-    g.view = screen.get_rect()
-    g.old_view = Rect(g.view)
     map_obj = newvid.TileMap(layer_group, bg_group)
-    g.map_bg = map_obj
-
     tiles = [[newvid.Tile(pygame.Surface((16,16)),
                         newvid.Pos(16,16),
                         newvid.Pos(1,1),
@@ -112,7 +105,6 @@ def init():
     sprite_col = newvid.SpriteCollection(layer_group, sprite_group, sprite_file=None)
 
     sprite = AnimatedSprite(
-                        g,
                         pygame.Surface((16,16)),
                         newvid.Pos(16,16),
                         newvid.Pos(1,1),
@@ -121,19 +113,14 @@ def init():
                         layer_group,
                         sprite_group)
     sprite.image.fill(Color(255,0,0))
-
-#    sprite2 = AnimatedSprite(
-#                        pygame.Surface((16,16)),
-#                        newvid.Pos(16,16),
-#                        newvid.Pos(1,1),
-#                        {},
-#                        newvid.Pos(1, 0),
-#                        layer_group,
-#                        sprite_group)
-#    sprite2.image.fill(Color(255,0,0))
-#
     sprite_col.sprites = [sprite]
-    g.sprites = sprite_col
+
+    g = newvid.NewVid(screen=screen, layer_group=layer_group,
+                      map_obj=map_obj, sprite_col=sprite_col,
+                      bg_group=bg_group)
+    sprite.vid = g
+    g.view = screen.get_rect()
+    g.old_view = Rect(g.view)
 
 
     return g

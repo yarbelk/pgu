@@ -149,8 +149,8 @@ class TileMap(GeometryMixin, SpriteCollectionMixin):
         self.layer_group = layer_group
         self.bg_group = bg_group
         self.groups = groups + (layer_group, bg_group)
-        if map_file:
-            self.load_map(map_file, groups)
+        if map_file is not None:
+            self.load_map(map_file)
 
     def load_map(self, map_file):
         raise NotImplemented
@@ -190,13 +190,13 @@ class NewVid(object):
     This is a tile engine for keeping a background layer and a forground
     layers.
     """
-    def __init__(self, screen, layer_group, bg_group, map_file=None, sprite_file=None,
+    def __init__(self, screen, layer_group, bg_group, map_obj=None, sprite_col=None,
             *groups):
         self.view = pygame.Rect(0, 0, 0, 0)
         self.old_view = pygame.Rect(self.view)
         self.screen = screen
-        #self.map_bg = self.load_map(map_file)
-        #self.sprites = self.load_sprites(sprite_file)
+        self.map_bg = map_obj
+        self.sprites = sprite_col
         self.layer_group = layer_group
         self.bg_group = bg_group
 
