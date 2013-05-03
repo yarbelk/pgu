@@ -210,3 +210,7 @@ class NewVid(object):
     def draw(self, surface, view):
         self.layer_group.clear(surface, self.map_bg.get_bg())
         self.layer_group.draw(surface)
+
+class GeometryVid(GeometryMixin, NewVid):
+    """Vid which contains methods for distance and position"""
+    pass
