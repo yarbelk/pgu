@@ -3,21 +3,19 @@
 from pgu.vid import *
 import pygame
 
-class _Tilevid(Vid):
+class Tilevid(Vid):
     """Based on [[vid]] -- see for reference."""
     def paint(self,s):
         sw,sh = s.get_width(),s.get_height()
         self.view.w,self.view.h = sw,sh
 
         tiles = self.tiles
-        # here, this is diferent from hex and iso, where w, h are tw, th.
         tw,th = tiles[0].image.get_width(),tiles[0].image.get_height()
         w,h = self.size
 
-        if self.bounds != None:
-            self.view.clamp_ip(self.bounds)
+        if self.bounds != None: self.view.clamp_ip(self.bounds)
 
-        ox,oy = self.view.x,self.view.y  # == sw, sh
+        ox,oy = self.view.x,self.view.y
         tlayer = self.tlayer
         blayer = self.blayer
         alayer = self.alayer
@@ -34,7 +32,7 @@ class _Tilevid(Vid):
                     trow = tlayer[y]
                     brow = blayer[y]
                     arow = alayer[y]
-                    xx = - (self.view.x%tw)
+                    xx= - (self.view.x%tw)
                     mx = (ox+sw)/tw
                     #if (ox+sh)%tw: mx += 1
                     for x in xrange(ox/tw,mx+1):
@@ -72,12 +70,10 @@ class _Tilevid(Vid):
         return [Rect(0,0,sw,sh)]
 
     def update(self,s):
-        sw,sh = s.get_width(), s.get_height()
-        self.view.w, self.view.h = sw,sh
+        sw,sh = s.get_width(),s.get_height()
+        self.view.w,self.view.h = sw,sh
 
-        if self.bounds != None:
-            self.view.clamp_ip(self.bounds)
-
+        if self.bounds != None: self.view.clamp_ip(self.bounds)
         if self.view.x != self._view.x or self.view.y != self._view.y:
             return self.paint(s)
 
@@ -99,7 +95,7 @@ class _Tilevid(Vid):
         ss = self.sprites.removed
         self.sprites.removed = []
         ss.extend(sprites)
-        for s in ss:  # Redefinging s...
+        for s in ss:
             #figure out what has been updated.
             s.irect.x = s.rect.x-s.shape.x
             s.irect.y = s.rect.y-s.shape.y
@@ -138,7 +134,7 @@ class _Tilevid(Vid):
         #mark sprites that are not being updated that need to be updated because
         #they are being overwritte by sprites / tiles
         for s in sprites:
-            if not s.updated:
+            if s.updated==0:
                 r = s.irect
                 y = max(0,r.y/th)
                 yy = min(h,r.bottom/th+1)
@@ -147,7 +143,7 @@ class _Tilevid(Vid):
                     xx = min(w,r.right/tw+1)
                     while x < xx:
                         if alayer[y][x]==1:
-                            s.updated=True
+                            s.updated=1
                         x += 1
                     y += 1
 
@@ -195,31 +191,3 @@ class _Tilevid(Vid):
         x,y = self.tile_to_view(pos)
         x,y = x - self.view.x, y - self.view.y
         return x,y
-
-
-class Tilevid(TileBasedVidMixin, Vid):
-    def view_to_tile(self,pos):
-        x,y = pos
-        tiles = self.tiles
-        tw,th = tiles[0].image.get_width(),tiles[0].image.get_height()
-        return x/tw,y/th
-
-    def tile_to_view(self,pos):
-        x,y = pos
-        tiles = self.tiles
-        tw,th = tiles[0].image.get_width(),tiles[0].image.get_height()
-        x,y = x*tw, y*th
-        return x,y
-
-
-    def screen_to_tile(self,pos):
-        x,y = pos
-        x,y = x+self.view.x,y+self.view.y
-        return self.view_to_tile((x,y))
-
-    def tile_to_screen(self,pos):
-        x,y = pos
-        x,y = self.tile_to_view(pos)
-        x,y = x - self.view.x, y - self.view.y
-        return x,y
-
