@@ -21,7 +21,6 @@ Bible of the same name for historical reasons.)
 import pygame
 from pygame.rect import Rect
 from pygame.locals import *
-import math
 from collections import namedtuple
 import yaml
 
@@ -140,7 +139,6 @@ class TileMap(GeometryMixin, SpriteCollectionMixin):
 
     Attributes:
         size -- size in tiles of the map
-        atlas -- image atlas
         tile_descriptiors -- tile information loaded from map_file
         size -- size of tile in pixels.  Defaults to the size of the tile
                      image
@@ -155,22 +153,7 @@ class TileMap(GeometryMixin, SpriteCollectionMixin):
             self.load_map(map_file, groups)
 
     def load_map(self, map_file):
-        with open(map_file) as map_fd:
-            data = yaml.load_all(map_fd)
-        self.size = data['meta']['size']
-        self.atlas = self.load_atlas(data['meta']['atlas'])
-        self.tile_descriptors = data['tiles']
-        self.tile_size = Pos(data['tile_size'])
-        self.sprites = [[Tile(self.atlas[tile['image']],
-                           tile_size=self.tile_size,
-                           size=tile['size'],
-                           attributes=tile['attributes'],
-                           pos=tile['pos'],
-                           *self.group)
-                           for tile in
-                           tile_row] for tile_row in self.tile_descriptors]
-        self.surface = pygame.surface.Surface((size[0] * tile_size[0],
-                                              size[1] * tile_size[1]))
+        raise NotImplemented
 
     def set_bg(self):
         self.bg_group.draw(self.surface)
@@ -199,13 +182,7 @@ class SpriteCollection(SpriteCollectionMixin):
         self.sprite_group.update(*args)
 
     def load_sprites(self, sprite_file):
-        with open(sprite_file) as sprite_fd:
-            data = yaml.load_all(sprite_fd)
-        self.size = data['meta']['size']
-        self.atlas = self.load_atlas(data['meta']['atlas'])
-        self.sprites = data['sprites']  # use !!python/object:sprite.SomeSprite
-        for sprite in self.sprites:
-            sprite.add(self.sprite_group)
+        raise NotImplemented
 
 
 class NewVid(object):
