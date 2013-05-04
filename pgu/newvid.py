@@ -63,14 +63,7 @@ class BaseSprite(pygame.sprite.DirtySprite):
         self.old_pos = Pos(self.pos)
         self.rect = self.get_surface_pos(pos)
         self.old_rect = Rect(self.rect)
-        self.groups = groups
-        self.dirty = 1
-        for attribute in attributes:
-            if self.hasattr(attribute):
-                self.setattr(attributes[attribute])
-            else:
-                raise AttributeError("Bad Attribute")
-        super(BaseSprite, self).__init__(*groups)
+        pygame.sprite.DirtySprite.__init__(self, *groups)
 
     def move(self, pos):
         self.old_pos = Pos(self.pos)
@@ -89,7 +82,6 @@ class BaseSprite(pygame.sprite.DirtySprite):
         return Rect(top_left, top_right, self.tile_size.x, self.tile_size.y)
 
 
-
 class Tile(BaseSprite):
     """
     A tile, which is an image, size and position in tile coords
@@ -97,7 +89,7 @@ class Tile(BaseSprite):
     def __init__(self, image, tile_size, size, attributes, pos,
             *groups):
         self._layer = -1
-        super(Tile, self).__init__(image, tile_size, size, attributes, pos,
+        BaseSprite.__init__(self, image, tile_size, size, attributes, pos,
                 *groups)
 
 
@@ -115,7 +107,7 @@ class SpriteCollectionMixin(object):
     """
 
     def load_atlas(self, atlas_file):
-        self.atlas = Atlas(atlas_file)
+        raise NotImplemented
 
     def paint_regions(self, surface, regions):
         """Paints regions supplied to the surface supplied"""
